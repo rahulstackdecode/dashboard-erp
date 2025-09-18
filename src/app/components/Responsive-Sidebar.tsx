@@ -1,6 +1,5 @@
 "use client";
 import { useState, ReactNode } from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from "@/app/components/Logo";
 import {

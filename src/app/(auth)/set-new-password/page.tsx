@@ -8,18 +8,24 @@ import Logo from "@/app/components/Logo";
 import { registerErrors } from "@/app/(auth)/constants/errors";
 import { supabase } from "@/lib/supabaseClient";
 
+type ErrorField = "password" | "confirmPassword" | "form";
+
+interface FormError {
+  field: ErrorField;
+  message: string;
+}
+
 export default function SetNewPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState<{ password?: string; confirmPassword?: string; form?: string }>({});
+  const [error, setError] = useState<Partial<Record<ErrorField, string>>>({});
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
-  const accessToken = searchParams.get("access_token");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,40 +33,30 @@ export default function SetNewPasswordPage() {
     setSuccess("");
     setLoading(true);
 
-    if (!password) {
-      setError({ password: registerErrors.password.empty });
-      setLoading(false);
-      return;
-    } else if (password.length < 6) {
-      setError({ password: registerErrors.password.weak });
-      setLoading(false);
-      return;
-    }
-
-    if (!confirmPassword) {
-      setError({ confirmPassword: registerErrors.confirmPassword.empty });
-      setLoading(false);
-      return;
-    } else if (confirmPassword !== password) {
-      setError({ confirmPassword: registerErrors.confirmPassword.mismatch });
-      setLoading(false);
-      return;
-    }
-
     try {
-      // ✅ Supabase uses the session from the reset link
+      // Validation
+      if (!password) throw { field: "password", message: registerErrors.password.empty } as FormError;
+      if (password.length < 6) throw { field: "password", message: registerErrors.password.weak } as FormError;
+      if (!confirmPassword) throw { field: "confirmPassword", message: registerErrors.confirmPassword.empty } as FormError;
+      if (confirmPassword !== password) throw { field: "confirmPassword", message: registerErrors.confirmPassword.mismatch } as FormError;
+
+      // Update password
       const { error: supabaseError } = await supabase.auth.updateUser({ password });
 
-      if (supabaseError) {
-        setError({ form: supabaseError.message });
-        setLoading(false);
-        return;
-      }
+      if (supabaseError) throw { field: "form", message: supabaseError.message } as FormError;
 
       setSuccess("Password updated successfully! Redirecting to login...");
       setTimeout(() => router.push("/login"), 2000);
-    } catch (err: any) {
-      setError({ form: err.message || "Something went wrong" });
+
+    } catch (err: unknown) {
+      if (typeof err === "object" && err !== null && "field" in err && "message" in err) {
+        const formError = err as FormError;
+        setError({ [formError.field]: formError.message });
+      } else if (err instanceof Error) {
+        setError({ form: err.message });
+      } else {
+        setError({ form: "Something went wrong" });
+      }
     } finally {
       setLoading(false);
     }
@@ -86,7 +82,8 @@ export default function SetNewPasswordPage() {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
-                  if (error.password && e.target.value.length >= 6) setError((prev) => ({ ...prev, password: "" }));
+                  if (error.password && e.target.value.length >= 6)
+                    setError((prev) => ({ ...prev, password: "" }));
                 }}
                 style={{ color: "var(--heading-color)" }}
                 className={`peer w-full px-4 pt-4 pb-4 border border-[#0000000D] rounded-sm outline-none placeholder-transparent focus:ring-2
@@ -150,18 +147,20 @@ export default function SetNewPasswordPage() {
               )}
             </div>
 
-            {/* Submit with Loader */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
               className="w-full py-3 px-2 mt-2 font-semibold text-white rounded-sm border border-[#0000000D] transition-colors duration-300 cursor-pointer flex items-center justify-center"
               style={{ backgroundColor: "var(--primary-color)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--btn-hover-bg)")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--primary-color)")}
+              onMouseEnter={(e) =>
+                !loading && (e.currentTarget.style.backgroundColor = "var(--btn-hover-bg)")
+              }
+              onMouseLeave={(e) =>
+                !loading && (e.currentTarget.style.backgroundColor = "var(--primary-color)")
+              }
             >
-              {loading ? (
-                <Loader2 size={18} className="animate-spin me-2" />
-              ) : null}
+              {loading && <Loader2 size={18} className="animate-spin me-2" />}
               {loading ? "Processing..." : "Update Password"}
             </button>
           </form>

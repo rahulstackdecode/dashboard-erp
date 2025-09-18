@@ -125,10 +125,6 @@ export default function ProjectList() {
         }
     };
 
-    const handleAddNewProject = () => {
-        alert("Add New Project clicked! Implement your add project logic here.");
-    };
-
     return (
         <div className="attendance-wrapper">
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">

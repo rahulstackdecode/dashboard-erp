@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clock, Plus, X } from "lucide-react";
+import { Clock, Plus} from "lucide-react";
 import HrEmployeesStats from "../components/hr/HrEmployessStats";
 import TeamLeaderAttendanceOverview from "../components/teamleader/AttendanceTable";
 import Image from "next/image";

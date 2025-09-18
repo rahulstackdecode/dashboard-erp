@@ -26,55 +26,66 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false); // ✅ loader state
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError({});
-    setSuccess("");
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError({});
+  setSuccess("");
 
-    if (!name.trim()) return setError({ name: registerErrors.name.empty });
-    if (!email.trim()) return setError({ email: registerErrors.email.empty });
-    if (!/\S+@\S+\.\S+/.test(email.trim()))
-      return setError({ email: registerErrors.email.invalid });
-    if (!role) return setError({ role: registerErrors.role.empty });
-    if (!password) return setError({ password: registerErrors.password.empty });
-    if (password.length < 6)
-      return setError({ password: registerErrors.password.invalid });
-    if (!confirmPassword)
-      return setError({ confirmPassword: registerErrors.confirmPassword.empty });
-    if (confirmPassword !== password)
-      return setError({
-        confirmPassword: registerErrors.confirmPassword.mismatch,
-      });
+  // Validation
+  if (!name.trim()) return setError({ name: registerErrors.name.empty });
+  if (!email.trim()) return setError({ email: registerErrors.email.empty });
+  if (!/\S+@\S+\.\S+/.test(email.trim()))
+    return setError({ email: registerErrors.email.invalid });
+  if (!role) return setError({ role: registerErrors.role.empty });
+  if (!password) return setError({ password: registerErrors.password.empty });
+  if (password.length < 6)
+    return setError({ password: registerErrors.password.invalid });
+  if (!confirmPassword)
+    return setError({ confirmPassword: registerErrors.confirmPassword.empty });
+  if (confirmPassword !== password)
+    return setError({ confirmPassword: registerErrors.confirmPassword.mismatch });
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-          data: { name: name.trim(), role },
-        },
-      });
+    // Ensure window exists (client-side)
+    const redirectUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/login`
+        : "/login";
 
-      if (signUpError) return setError({ form: signUpError.message });
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: { name: name.trim(), role },
+      },
+    });
 
-      setSuccess(
-        "Account created. Please check your email to verify and then log in."
-      );
-
-      setName("");
-      setEmail("");
-      setRole("");
-      setPassword("");
-      setConfirmPassword("");
-    } catch (err: any) {
-      setError({ form: err?.message || "Something went wrong" });
-    } finally {
-      setLoading(false);
+    if (signUpError) {
+      setError({ form: signUpError.message });
+      return;
     }
-  };
+
+    setSuccess(
+      "Account created. Please check your email to verify and then log in."
+    );
+
+    // Clear form
+    setName("");
+    setEmail("");
+    setRole("");
+    setPassword("");
+    setConfirmPassword("");
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Something went wrong";
+    setError({ form: errorMessage });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <AuthLayout>

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clock, Plus, X } from "lucide-react";
+import { Clock, Plus } from "lucide-react";
 import HrEmployeesStats from "../components/hr/HrEmployessStats";
 import HrAttendanceOverview from "../components/hr/HrAttendanceOverview";
 import AttendanceCharts from "../components/hr/AttendanceCharts";
@@ -114,18 +114,6 @@ export default function Dashboard() {
     const radius = (svgSize - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (progress / 100) * circumference;
-
-    const handleApplyLeave = (e: React.FormEvent) => {
-        e.preventDefault();
-        alert(
-            `Leave Applied!\nType: ${leaveType}\nFrom: ${fromDate}\nTo: ${toDate}\nReason: ${reason}`
-        );
-        setLeaveType("Medical Leave");
-        setFromDate("");
-        setToDate("");
-        setReason("");
-        setIsModalOpen(false);
-    };
 
     return (
         <div>

@@ -3,7 +3,6 @@ import { useState } from "react";
 import HelpdeskTickets from "@/app/components/hr/HelpdeskSupport";
 
 export default function HomePage() {
-    const [isOpen, setIsOpen] = useState(true);
 
     return (
         <>

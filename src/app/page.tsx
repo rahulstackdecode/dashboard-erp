@@ -1,15 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import Sidebar from "./components/Sidebar";
-import ResponsiveSidebar from "./components/Responsive-Sidebar";
-import Topbar from "./components/Topbar";
 import DashboardStats from "./components/DashboardStats";
 import { Plus } from "lucide-react";
 import SalesChart from "./components/SalesChart";
 import ProjectsChart from "./components/ProjectsChart";
 import EmployeesChart from "./components/EmployeesChart";
 import Image from "next/image";
-import FooterCopyright from "./components/FooterCopyright";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function HomePage() {

@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import {
   Chart as ChartJS,
@@ -9,6 +10,8 @@ import {
   Tooltip,
   Legend,
   ChartOptions,
+  Chart,
+  ChartDataset,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { SlidersHorizontal } from "lucide-react";
@@ -21,7 +24,6 @@ export default function WeeklyAttendance() {
   const [filter, setFilter] = useState<FilterType>("Weekly");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Demo data
   const labelsByFilter: Record<FilterType, string[]> = {
     Weekly: ["Sales", "Designer", "Marketing", "Developer", "UI/UX"],
     BiWeekly: [
@@ -70,9 +72,9 @@ export default function WeeklyAttendance() {
   };
 
   const highlightIndexByFilter: Record<FilterType, number> = {
-    Weekly: 2, // Marketing
-    BiWeekly: 7, // Marketing W2
-    Monthly: 2, // Marketing W1
+    Weekly: 2,
+    BiWeekly: 7,
+    Monthly: 2,
   };
 
   const labels = labelsByFilter[filter];
@@ -117,24 +119,26 @@ export default function WeeklyAttendance() {
       },
       x: {
         grid: {
-          display: false, // ✅ remove vertical lines
+          display: false,
         },
       },
     },
   };
 
-  // Plugin for label above highlighted bar
+  // Properly typed plugin for Chart.js
   const labelPlugin = {
     id: "labelPlugin",
-    afterDatasetsDraw: (chart: any) => {
-      const { ctx } = chart;
-      chart.getDatasetMeta(0).data.forEach((bar: any, i: number) => {
+    afterDatasetsDraw: (chart: Chart<"bar", number[], string>) => {
+      const ctx = chart.ctx;
+      const datasetMeta = chart.getDatasetMeta(0);
+      datasetMeta.data.forEach((bar, i) => {
         if (i === highlightIndex) {
+          const { x, y } = bar as unknown as { x: number; y: number };
           ctx.save();
           ctx.fillStyle = "#000";
           ctx.font = "bold 14px sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText(`${values[i]}%`, bar.x, bar.y - 10);
+          ctx.fillText(`${values[i]}%`, x, y - 10);
           ctx.restore();
         }
       });
@@ -148,8 +152,7 @@ export default function WeeklyAttendance() {
     >
       {/* Header */}
       <div className="flex justify-between items-center mb-5">
-      <h2 className="text-[18px] font-semibold text-[#2C2C2C]">
-{filter} Attendance</h2>
+        <h2 className="text-[18px] font-semibold text-[#2C2C2C]">{filter} Attendance</h2>
         <div className="relative">
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -160,7 +163,7 @@ export default function WeeklyAttendance() {
 
           {/* Dropdown */}
           {showFilters && (
-            <div className="absolute right-0 mt-2 w-32 bg-white shadow-md rounded-lg border">
+            <div className="absolute right-0 mt-2 w-32 bg-white shadow-md rounded-lg border z-50">
               {Object.keys(labelsByFilter).map((f) => (
                 <button
                   key={f}

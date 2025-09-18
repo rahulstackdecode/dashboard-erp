@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Clock, Plus, X } from "lucide-react";
 import EmployeesStats from "../components/employees/EmployeesStats";
 import TaskOverviewWrapper from "../components/employees/TaskOverview";
@@ -8,259 +8,251 @@ import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function Dashboard() {
-    const [punchInTime, setPunchInTime] = useState<Date | null>(null);
-    const [isLiveSession, setIsLiveSession] = useState(false);
-    const [accumulatedSeconds, setAccumulatedSeconds] = useState(0);
-    const [progress, setProgress] = useState(0);
-    const [buttonText, setButtonText] = useState("Punch In");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const [punchInTime, setPunchInTime] = useState<Date | null>(null);
+  const [isLiveSession, setIsLiveSession] = useState(false);
+  const [accumulatedSeconds, setAccumulatedSeconds] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [buttonText, setButtonText] = useState("Punch In");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [leaveType, setLeaveType] = useState("Medical Leave");
-    const [fromDate, setFromDate] = useState("");
-    const [toDate, setToDate] = useState("");
-    const [reason, setReason] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [leaveType, setLeaveType] = useState("Medical Leave");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [reason, setReason] = useState("");
 
-    const [userName, setUserName] = useState("Loading...");
-    const [userPosition, setUserPosition] = useState("Loading...");
-    const [userImage, setUserImage] = useState("");
-    const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState("Loading...");
+  const [userPosition, setUserPosition] = useState("Loading...");
+  const [userImage, setUserImage] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
 
-    const svgSize = 150;
-    const strokeWidth = 8;
-    const radius = (svgSize - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
+  const svgSize = 150;
+  const strokeWidth = 8;
+  const radius = (svgSize - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
 
-    const formatDateTime = (date: Date) => {
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        const ampm = hours >= 12 ? "PM" : "AM";
-        const formattedHour = (hours % 12 || 12).toString().padStart(2, "0");
-        const formattedMinutes = minutes.toString().padStart(2, "0");
-        const day = date.getDate().toString().padStart(2, "0");
-        const month = date.toLocaleString("en-US", { month: "short" });
-        const year = date.getFullYear();
-        return `${formattedHour}:${formattedMinutes} ${ampm}, ${day} ${month} ${year}`;
+  const formatDateTime = (date: Date) => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const formattedHour = (hours % 12 || 12).toString().padStart(2, "0");
+    const formattedMinutes = minutes.toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = date.toLocaleString("en-US", { month: "short" });
+    const year = date.getFullYear();
+    return `${formattedHour}:${formattedMinutes} ${ampm}, ${day} ${month} ${year}`;
+  };
+
+  // fetch user info
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return setUserId(null);
+      setUserId(user.id);
+
+      const { data, error: fetchError } = await supabase
+        .from("users")
+        .select("name, position, profile_image")
+        .eq("auth_id", user.id)
+        .single();
+
+      if (fetchError || !data) {
+        setUserName("Unknown User");
+        setUserPosition("-");
+        setUserImage("/images/user-img.png");
+      } else {
+        setUserName(data.name);
+        setUserPosition(data.position);
+        setUserImage(data.profile_image || "/images/user-img.png");
+      }
     };
+    fetchUser();
+  }, []);
 
-    // fetch user info
-    useEffect(() => {
-        const fetchUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return setUserId(null);
-            setUserId(user.id);
-
-            const { data, error } = await supabase
-                .from("users")
-                .select("name, position, profile_image")
-                .eq("auth_id", user.id)
-                .single();
-
-            if (error || !data) {
-                setUserName("Unknown User");
-                setUserPosition("-");
-                setUserImage("/images/user-img.png");
-            } else {
-                setUserName(data.name);
-                setUserPosition(data.position);
-                setUserImage(data.profile_image || "/images/user-img.png");
-            }
-        };
-        fetchUser();
-    }, []);
-
-    // fetch today's attendance
-    const fetchTodayAttendance = async () => {
-        if (!userId) return;
-        const today = new Date().toISOString().split("T")[0];
-
-        const { data: record, error } = await supabase
-            .from("attendance")
-            .select("*")
-            .eq("user_id", userId)
-            .eq("date", today)
-            .single();
-
-        if (error && error.code !== "PGRST116") {
-            console.error("fetchTodayAttendance error:", error);
-            return;
-        }
-
-        if (record) {
-            setAccumulatedSeconds(record.total_seconds || 0);
-            if (record.punch_in && !record.punch_out) {
-                setPunchInTime(new Date(record.punch_in));
-                setIsLiveSession(true);
-                setButtonText("Punch Out");
-            } else {
-                setPunchInTime(null);
-                setIsLiveSession(false);
-                setButtonText("Punch In");
-            }
-        } else {
-            setAccumulatedSeconds(0);
-            setPunchInTime(null);
-            setIsLiveSession(false);
-            setButtonText("Punch In");
-        }
-    };
-
-    useEffect(() => {
-        if (!userId) return;
-
-        fetchTodayAttendance();
-
-        const channel = supabase
-            .channel("attendance_changes")
-            .on(
-                "postgres_changes",
-                {
-                    event: "*",
-                    schema: "public",
-                    table: "attendance",
-                    filter: `user_id=eq.${userId}`,
-                },
-                () => fetchTodayAttendance()
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [userId]);
-
-    // timer live progress
-    useEffect(() => {
-        if (!punchInTime || !isLiveSession) return;
-
-        const timer = setInterval(() => {
-            const elapsedSeconds = Math.floor((new Date().getTime() - punchInTime.getTime()) / 1000);
-            setProgress(Math.min(((accumulatedSeconds + elapsedSeconds) / (8 * 3600)) * 100, 100));
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [punchInTime, accumulatedSeconds, isLiveSession]);
-
-    // Punch In/Out logic with single row per day
-const handlePunchToggle = async () => {
-  if (!userId || isSubmitting) return;
-  setIsSubmitting(true);
-
-  try {
+  // fetch today's attendance
+  const fetchTodayAttendance = useCallback(async () => {
+    if (!userId) return;
     const today = new Date().toISOString().split("T")[0];
-    const now = new Date();
 
-    // fetch today's attendance
-    const { data: record, error } = await supabase
+    const { data: record, error: fetchError } = await supabase
       .from("attendance")
       .select("*")
       .eq("user_id", userId)
       .eq("date", today)
       .single();
 
-    if (!record) {
-      // first punch-in of the day
-      setPunchInTime(now);
-      setIsLiveSession(true);
-      setButtonText("Punch Out");
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error("fetchTodayAttendance error:", fetchError);
+      return;
+    }
 
-      await supabase.from("attendance").insert([
-        {
-          user_id: userId,
-          date: today,
-          punch_in: now.toISOString(), // first punch-in
-          punch_out: null,
-          total_seconds: 0,
-          status: "Present",
-        },
-      ]);
-      setAccumulatedSeconds(0);
-    } else if (!punchInTime) {
-      // new punch-in after punch-out
-      setPunchInTime(now);
-      setIsLiveSession(true);
-      setButtonText("Punch Out");
-      // DO NOT update first punch_in, keep old
+    if (record) {
+      setAccumulatedSeconds(record.total_seconds || 0);
+      if (record.punch_in && !record.punch_out) {
+        setPunchInTime(new Date(record.punch_in));
+        setIsLiveSession(true);
+        setButtonText("Punch Out");
+      } else {
+        setPunchInTime(null);
+        setIsLiveSession(false);
+        setButtonText("Punch In");
+      }
     } else {
-      // punch out of ongoing session
-      const sessionSeconds = Math.floor((now.getTime() - punchInTime.getTime()) / 1000);
-      const newTotal = (record.total_seconds || 0) + sessionSeconds;
-
-      await supabase
-        .from("attendance")
-        .update({ 
-          total_seconds: newTotal,
-          punch_out: now.toISOString(), // update last punch-out
-        })
-        .eq("id", record.id);
-
-      setAccumulatedSeconds(newTotal);
+      setAccumulatedSeconds(0);
       setPunchInTime(null);
       setIsLiveSession(false);
       setButtonText("Punch In");
     }
-  } finally {
-    setTimeout(() => setIsSubmitting(false), 300);
-  }
-};
+  }, [userId]);
 
+  useEffect(() => {
+    if (!userId) return;
 
+    fetchTodayAttendance();
 
-    const formatTime = (totalSeconds: number) => {
-        const h = Math.floor(totalSeconds / 3600);
-        const m = Math.floor((totalSeconds % 3600) / 60);
-        const s = totalSeconds % 60;
-        return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s
-            .toString()
-            .padStart(2, "0")}`;
+    const channel = supabase
+      .channel("attendance_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "attendance",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => fetchTodayAttendance()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
+  }, [userId, fetchTodayAttendance]);
 
-    const getProductionTime = () => {
-        const elapsedSeconds =
-            punchInTime && isLiveSession
-                ? Math.floor((new Date().getTime() - punchInTime.getTime()) / 1000)
-                : 0;
-        return formatTime(accumulatedSeconds + elapsedSeconds);
-    };
+  // timer live progress
+  useEffect(() => {
+    if (!punchInTime || !isLiveSession) return;
 
-    // Leave form handler
-    const handleApplyLeave = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!userId) return;
+    const timer = setInterval(() => {
+      const elapsedSeconds = Math.floor(
+        (new Date().getTime() - punchInTime.getTime()) / 1000
+      );
+      setProgress(Math.min(((accumulatedSeconds + elapsedSeconds) / (8 * 3600)) * 100, 100));
+    }, 1000);
 
-        try {
-            setIsSubmitting(true);
-            const { error } = await supabase.from("leaves").insert([
-                {
-                    user_id: userId,
-                    leave_type: leaveType,
-                    from_date: fromDate,
-                    to_date: toDate,
-                    reason,
-                    status: "Pending",
-                },
-            ]);
+    return () => clearInterval(timer);
+  }, [punchInTime, accumulatedSeconds, isLiveSession]);
 
-            if (error) {
-                console.error("Leave submission error:", error);
-                alert("Failed to submit leave. Please try again.");
-            } else {
-                alert("Leave applied successfully!");
-                setIsModalOpen(false);
-                setLeaveType("Medical Leave");
-                setFromDate("");
-                setToDate("");
-                setReason("");
-            }
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+  // Punch In/Out logic with single row per day
+  const handlePunchToggle = async () => {
+    if (!userId || isSubmitting) return;
+    setIsSubmitting(true);
 
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
 
-    return (
-        <div>
+      const { data: record, error } = await supabase
+        .from("attendance")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", today)
+        .single();
+
+      if (!record) {
+        setPunchInTime(now);
+        setIsLiveSession(true);
+        setButtonText("Punch Out");
+
+        await supabase.from("attendance").insert([
+          {
+            user_id: userId,
+            date: today,
+            punch_in: now.toISOString(),
+            punch_out: null,
+            total_seconds: 0,
+            status: "Present",
+          },
+        ]);
+        setAccumulatedSeconds(0);
+      } else if (!punchInTime) {
+        setPunchInTime(now);
+        setIsLiveSession(true);
+        setButtonText("Punch Out");
+      } else {
+        const sessionSeconds = Math.floor((now.getTime() - punchInTime.getTime()) / 1000);
+        const newTotal = (record.total_seconds || 0) + sessionSeconds;
+
+        await supabase
+          .from("attendance")
+          .update({ total_seconds: newTotal, punch_out: now.toISOString() })
+          .eq("id", record.id);
+
+        setAccumulatedSeconds(newTotal);
+        setPunchInTime(null);
+        setIsLiveSession(false);
+        setButtonText("Punch In");
+      }
+    } finally {
+      setTimeout(() => setIsSubmitting(false), 300);
+    }
+  };
+
+  const formatTime = (totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const getProductionTime = () => {
+    const elapsedSeconds =
+      punchInTime && isLiveSession
+        ? Math.floor((new Date().getTime() - punchInTime.getTime()) / 1000)
+        : 0;
+    return formatTime(accumulatedSeconds + elapsedSeconds);
+  };
+
+  // Leave form handler
+  const handleApplyLeave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!userId) return;
+
+    try {
+      setIsSubmitting(true);
+      const { error: leaveError } = await supabase.from("leaves").insert([
+        {
+          user_id: userId,
+          leave_type: leaveType,
+          from_date: fromDate,
+          to_date: toDate,
+          reason,
+          status: "Pending",
+        },
+      ]);
+
+      if (leaveError) {
+        console.error("Leave submission error:", leaveError);
+        alert("Failed to submit leave. Please try again.");
+      } else {
+        alert("Leave applied successfully!");
+        setIsModalOpen(false);
+        setLeaveType("Medical Leave");
+        setFromDate("");
+        setToDate("");
+        setReason("");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  return (
+      <div>
             <h2 className="mb-6 font-medium text-[26px] sm:text-[32px] text-[color:var(--heading-color)] leading-snug">
                 Employee Dashboard
             </h2>
@@ -484,5 +476,5 @@ const handlePunchToggle = async () => {
                 </div>
             )}
         </div>
-    );
+  );
 }

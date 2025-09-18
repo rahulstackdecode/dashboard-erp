@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Trash2, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 // --- Define types ---
 type AttendanceStatus = {
@@ -100,7 +100,6 @@ type AttendanceOverviewProps = {
 
 const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({
     paginatedRecords,
-    handleDelete,
     handleStatusChange,
 }) => {
     const [openStatusDropdown, setOpenStatusDropdown] = useState<number | string | null>(null);

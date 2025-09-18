@@ -7,11 +7,25 @@ import { startOfYear, endOfYear, startOfMonth, endOfMonth, format } from "date-f
 import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "@/lib/supabaseClient";
 
+interface User {
+  name: string;
+}
+
+interface AttendanceRow {
+  id: string;
+  date: string;
+  status: string;
+  punch_in?: string | null;
+  punch_out?: string | null;
+  total_seconds?: number | null;
+  users?: User[] | User | null; // Supabase can return array or single object
+}
+
 export default function AttendanceTable() {
   const [selectedMonth, setSelectedMonth] = useState<Date | null>(new Date());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const minDate = startOfYear(new Date());
@@ -43,15 +57,18 @@ export default function AttendanceTable() {
       const { data, error } = await query;
       if (error) throw error;
 
+      // Optional: Debug returned users
+      // console.log("Fetched data:", data);
+
       // Group by date to keep earliest punch-in per day
-      const groupedData: any[] = [];
-      const map = new Map<string, any>();
-      (data || []).forEach((row) => {
+      const groupedData: AttendanceRow[] = [];
+      const map = new Map<string, AttendanceRow>();
+      (data || []).forEach((row: AttendanceRow) => {
         const dateKey = row.date;
         if (!map.has(dateKey)) {
           map.set(dateKey, row);
         } else {
-          const existing = map.get(dateKey);
+          const existing = map.get(dateKey)!;
           if (row.punch_in && existing.punch_in) {
             if (new Date(row.punch_in) < new Date(existing.punch_in)) {
               map.set(dateKey, row);
@@ -59,7 +76,9 @@ export default function AttendanceTable() {
           }
         }
       });
+
       map.forEach((value) => groupedData.push(value));
+
       setAttendanceData(
         groupedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       );
@@ -110,7 +129,6 @@ export default function AttendanceTable() {
     const today = format(new Date(), "yyyy-MM-dd");
     const now = new Date().toISOString();
 
-    // Check if attendance exists for today
     const { data: existing, error } = await supabase
       .from("attendance")
       .select("id, punch_in")
@@ -124,7 +142,6 @@ export default function AttendanceTable() {
     }
 
     if (!existing) {
-      // First punch-in → insert new record
       await supabase.from("attendance").insert({
         user_id: userId,
         date: today,
@@ -132,10 +149,9 @@ export default function AttendanceTable() {
         status: "Present",
       });
     } else {
-      // Already punched in → update only punch_out and total_seconds
       const firstPunchIn = existing.punch_in;
       const totalSeconds =
-        (new Date(now).getTime() - new Date(firstPunchIn).getTime()) / 1000;
+        (new Date(now).getTime() - new Date(firstPunchIn!).getTime()) / 1000;
 
       await supabase
         .from("attendance")
@@ -146,7 +162,6 @@ export default function AttendanceTable() {
         .eq("id", existing.id);
     }
 
-    // Refresh table
     fetchAttendance();
   };
 
@@ -223,7 +238,11 @@ export default function AttendanceTable() {
                     : "-";
 
                   const totalHours = row.total_seconds ? formatTime(row.total_seconds) : "-";
-                  const userName = row.users?.name || "Unknown";
+
+                  // Robust user name access
+                  const userName = Array.isArray(row.users)
+                    ? row.users[0]?.name || "Unknown"
+                    : row.users?.name || "Unknown";
 
                   return (
                     <tr key={row.id} className="border-b border-gray-300 last:border-0 hover:bg-gray-50 transition">

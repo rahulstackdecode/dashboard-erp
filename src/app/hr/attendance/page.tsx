@@ -4,7 +4,6 @@ import AttendanceStats from "@/app/components/AttendanceStats";
 import AttendanceTable from "@/app/components/hr/AttendanceTable";
 
 export default function HomePage() {
-    const [isOpen, setIsOpen] = useState(true);
 
     return (
         <>

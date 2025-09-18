@@ -36,84 +36,89 @@ export default function LoginPage() {
     return () => listener.subscription.unsubscribe();
   }, [roleToRedirect, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError({});
-    setSuccess("");
-    setLoading(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError({});
+  setSuccess("");
+  setLoading(true);
 
-    if (!email) {
-      setLoading(false);
-      return setError({ email: loginErrors.email.empty });
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setLoading(false);
-      return setError({ email: loginErrors.email.invalid });
-    }
-    if (!password) {
-      setLoading(false);
-      return setError({ password: loginErrors.password.empty });
-    }
-    if (password.length < 6) {
-      setLoading(false);
-      return setError({ password: loginErrors.password.invalid });
+  // Validation
+  if (!email) {
+    setLoading(false);
+    setError({ email: loginErrors.email.empty });
+    return;
+  }
+  if (!/\S+@\S+\.\S+/.test(email)) {
+    setLoading(false);
+    setError({ email: loginErrors.email.invalid });
+    return;
+  }
+  if (!password) {
+    setLoading(false);
+    setError({ password: loginErrors.password.empty });
+    return;
+  }
+  if (password.length < 6) {
+    setLoading(false);
+    setError({ password: loginErrors.password.invalid });
+    return;
+  }
+
+  try {
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      setError({ form: signInError.message });
+      return;
     }
 
-    try {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    if (!signInData?.user) {
+      setError({ form: "No user found" });
+      return;
+    }
+
+    const authUser = signInData.user;
+    const authId = authUser.id;
+
+    const { data: existingUser, error: fetchError } = await supabase
+      .from("users")
+      .select("id, role")
+      .eq("auth_id", authId)
+      .maybeSingle();
+
+    if (fetchError) {
+      setError({ form: "Unable to fetch user data" });
+      return;
+    }
+
+const role = existingUser?.role || authUser.user_metadata?.role || "employees";
+
+    if (!existingUser) {
+      const { error: insertError } = await supabase.from("users").insert({
+        auth_id: authId,
+        email: authUser.email ?? "",
+        name: authUser.user_metadata?.name ?? null,
+        role,
       });
 
-      if (signInError) {
-        setLoading(false);
-        return setError({ form: signInError.message });
+      if (insertError) {
+        setError({ form: "Unable to create user profile" });
+        return;
       }
-
-      if (!signInData.user) {
-        setLoading(false);
-        return setError({ form: "No user found" });
-      }
-
-      const authUser = signInData.user;
-      const authId = authUser.id;
-
-      const { data: existingUser, error: fetchError } = await supabase
-        .from("users")
-        .select("id, role")
-        .eq("auth_id", authId)
-        .maybeSingle();
-
-      if (fetchError) {
-        setLoading(false);
-        return setError({ form: "Unable to fetch user data" });
-      }
-
-      let role = existingUser?.role;
-
-      if (!existingUser) {
-        const { error: insertError } = await supabase.from("users").insert({
-          auth_id: authId,
-          email: authUser.email,
-          name: authUser.user_metadata?.name || null,
-          role: authUser.user_metadata?.role || "employees",
-        });
-
-        if (insertError) {
-          setLoading(false);
-          return setError({ form: "Unable to create user profile" });
-        }
-        role = authUser.user_metadata?.role || "employees";
-      }
-
-      setSuccess("Login successful!");
-      setRoleToRedirect(roleFolder[role || "employees"]); // ✅ Set role-based redirect
-      setLoading(false);
-    } catch (err: any) {
-      setLoading(false);
-      setError({ form: err.message || "Something went wrong" });
     }
-  };
+
+    setSuccess("Login successful!");
+    setRoleToRedirect(roleFolder[role]); // Ensure roleFolder has all roles
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Something went wrong";
+    setError({ form: errorMessage });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <AuthLayout>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
 
@@ -49,80 +49,83 @@ const tabs: Tab[] = [
     },
 ];
 
+type FormData = Record<string, string>;
+
 export default function EmployeeProfileForm() {
     const [activeTab, setActiveTab] = useState(0);
-    const [form, setForm] = useState<any>({});
+    const [form, setForm] = useState<FormData>({});
     const [uploading, setUploading] = useState<boolean>(false);
     const [message, setMessage] = useState<string>("");
-
     const [profileImage, setProfileImage] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchUserData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+    const fetchUserData = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-            const { data, error } = await supabase
+        const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("auth_id", user.id)
+            .single();
+
+        if (error) {
+            console.error("Fetch error:", error);
+            return;
+        }
+
+        const initialForm: FormData = {};
+
+        // Generate Employee ID automatically if not exists
+        let empId = "";
+        if (data?.empId) {
+            empId = data.empId;
+        } else {
+            const { data: lastEmp, error: lastError } = await supabase
                 .from("users")
-                .select("*")
-                .eq("auth_id", user.id)
+                .select("empId")
+                .order("empId", { ascending: false })
+                .limit(1)
                 .single();
 
-            if (error) return console.error("Fetch error:", error);
-
-            const initialForm: any = {};
-
-            // Generate Employee ID automatically if not exists
-            let empId = "";
-            if (data?.empId) {
-                empId = data.empId;
+            if (!lastError && lastEmp?.empId) {
+                const lastNum = parseInt(lastEmp.empId, 10);
+                empId = (lastNum + 1).toString().padStart(3, "0");
             } else {
-                const { data: lastEmp, error: lastError } = await supabase
-                    .from("users")
-                    .select("empId")
-                    .order("empId", { ascending: false })
-                    .limit(1)
-                    .single();
-
-                if (!lastError && lastEmp?.empId) {
-                    const lastNum = parseInt(lastEmp.empId, 10);
-                    empId = (lastNum + 1).toString().padStart(3, "0");
-                } else {
-                    empId = "001";
-                }
+                empId = "001";
             }
+        }
 
-            tabs.forEach((tab) => {
-                tab.fields.forEach((field) => {
-                    const keyMap: any = {
-                        fullName: "name",
-                        maritalStatus: "marital_status",
-                        pinCode: "pin_code",
-                        empId: "empId",
-                    };
-                    initialForm[field.name] =
-                        field.name === "empId"
-                            ? empId
-                            : data[keyMap[field.name] || field.name] ?? "";
-                });
+        tabs.forEach((tab) => {
+            tab.fields.forEach((field) => {
+                const keyMap: Record<string, string> = {
+                    fullName: "name",
+                    maritalStatus: "marital_status",
+                    pinCode: "pin_code",
+                    empId: "empId",
+                };
+                initialForm[field.name] =
+                    field.name === "empId"
+                        ? empId
+                        : data[keyMap[field.name] || field.name] ?? "";
             });
+        });
 
-            if (data?.profile_image) {
-                setProfileImage(data.profile_image);
-            }
+        if (data?.profile_image) {
+            setProfileImage(data.profile_image);
+        }
 
-            setForm(initialForm);
-        };
-        fetchUserData();
+        setForm(initialForm);
     }, []);
 
+    useEffect(() => {
+        fetchUserData();
+    }, [fetchUserData]);
+
     const handleChange = (
-        e: React.ChangeEvent<
-            HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-        >
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
         const { name, value } = e.target;
-        setForm((prev: any) => ({ ...prev, [name]: value }));
+        setForm((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,28 +149,35 @@ export default function EmployeeProfileForm() {
                 return;
             }
 
-            const updates: any = {};
+            const updates: Record<string, string | null> & { profile_image?: string } = {};
+
             for (const tab of tabs) {
                 for (const field of tab.fields) {
-                    const keyMap: any = {
+                    const keyMap: Record<string, string> = {
                         fullName: "name",
                         maritalStatus: "marital_status",
                         pinCode: "pin_code",
                         empId: "empId",
                     };
-                    updates[keyMap[field.name] || field.name] =
-                        form[field.name] || null;
+
+                    let value = form[field.name]?.trim() || null;
+
+                    // If field is a date and empty string, set to null
+                    if (field.type === "date" && value === "") {
+                        value = null;
+                    }
+
+                    updates[keyMap[field.name] || field.name] = value;
                 }
             }
 
-            if (profileImage) {
-                updates.profile_image = profileImage;
-            }
+            if (profileImage) updates.profile_image = profileImage;
 
             const { error } = await supabase
                 .from("users")
                 .update(updates)
                 .eq("auth_id", user.id);
+
             if (error) setMessage("Update failed: " + error.message);
             else setMessage("Profile updated successfully");
         } catch (err) {
@@ -178,9 +188,9 @@ export default function EmployeeProfileForm() {
         }
     };
 
+
     return (
         <>
-
             <h2 className="mb-6 font-medium text-[26px] sm:text-[32px] text-[color:var(--heading-color)] leading-snug">
                 Account Overview
             </h2>
@@ -193,14 +203,12 @@ export default function EmployeeProfileForm() {
                             type="button"
                             onClick={() => setActiveTab(idx)}
                             className={`
-          px-4 py-2 cursor-pointer whitespace-nowrap font-medium text-[#2C2C2C]
-          border-b-2
-          ${activeTab === idx
-                                    ? "text-[#06A6F0] border-[#06A6F0]"
-                                    : "border-transparent"}
-          hover:text-[#06A6F0] hover:border-[#06A6F0]
-          transition-colors duration-200
-        `}
+                px-4 py-2 cursor-pointer whitespace-nowrap font-medium text-[#2C2C2C]
+                border-b-2
+                ${activeTab === idx ? "text-[#06A6F0] border-[#06A6F0]" : "border-transparent"}
+                hover:text-[#06A6F0] hover:border-[#06A6F0]
+                transition-colors duration-200
+              `}
                         >
                             {tab.name}
                         </button>
@@ -213,10 +221,7 @@ export default function EmployeeProfileForm() {
                         <div className="flex flex-col sm:flex-row items-center gap-6 mb-6">
                             <div className="w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
                                 <Image
-                                    src={
-                                        profileImage ||
-                                        "https://via.placeholder.com/150x150.png?text=Profile"
-                                    }
+                                    src={profileImage || "/images/user-img.png"}
                                     alt="Profile"
                                     width={96}
                                     height={96}
@@ -323,13 +328,11 @@ export default function EmployeeProfileForm() {
                     </div>
 
                     {/* Success / Error message */}
-                    {/* Success / Error message (only show on last tab) */}
                     {activeTab === tabs.length - 1 && message && (
                         <div className="mt-4 text-center text-md font-medium text-green-600">
                             {message}
                         </div>
                     )}
-
 
                     {/* Navigation buttons */}
                     <div className="flex flex-col sm:flex-row justify-end mt-6 gap-4">
@@ -369,7 +372,6 @@ export default function EmployeeProfileForm() {
                     </div>
                 </form>
             </div>
-
         </>
     );
 }

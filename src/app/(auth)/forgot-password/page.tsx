@@ -39,12 +39,17 @@ export default function ForgotPasswordPage() {
       }
 
       setSuccess("Password reset email sent! Please check your inbox.");
-    } catch (err: any) {
-      setError({ form: err.message || "Something went wrong" });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError({ form: err.message });
+      } else {
+        setError({ form: "Something went wrong" });
+      }
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <AuthLayout>
