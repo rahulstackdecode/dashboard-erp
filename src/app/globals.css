@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary-color: #06A6F0;
+  --heading-color: #2C2C2C;
+  --body-text-color: #567D8E;
+  --text-4xl: 38px;
+  --text-4xl--line-height: 1.2em;
+  --border-light: #567D8E33;
+  --radius-xl: 10px;
+  --color-red-600: #E52626;
+  --color-red-500: #E70D0D;
+  --text-green-600: #00B155;
+  --btn-hover-bg: #0267b8;
+  --white-text: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--body-text-color);
+  font-family: "outfit";
+  font-family: Outfit;
+  font-weight: 400;
+  font-size: 16px;
+
+}
+
+
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--heading-color);
+}
+
+input,
+select,
+textarea {
+  box-shadow: none;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: #2C2C2C !important;
+}
+
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.2rem top 50%;
+  background-size: 0.65rem auto;
+}
+
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #06A6F0;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #048ac7;
+}
+
+.search-form input {
+  box-shadow: none;
+  outline: none;
+}
+
+.filter-select {
+  appearance: none;
+}
+
+select {
+  background-image: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.react-datepicker__month-text {
+  font-size: 15px !important;
+  margin: 5px 0px !important;
+    border-radius: 2px !important;
+  padding: 2px !important
+}
+
+.react-datepicker__month-text.react-datepicker__month-text--selected {
+  background: #06a6f0 !important;
+  border-radius: 2px !important;
+
+}
+
+@media all and (max-width:1023px) {
+  header.topbar-header {
+    padding-left: 58px !important;
+  }
+}
+
+@media all and (max-width:767px) {
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+}
