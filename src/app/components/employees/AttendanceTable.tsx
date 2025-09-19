@@ -18,7 +18,7 @@ interface AttendanceRow {
   punch_in?: string | null;
   punch_out?: string | null;
   total_seconds?: number | null;
-  users?: User[] | User | null; // Supabase can return array or single object
+  users?: User[] | User | null;
 }
 
 export default function AttendanceTable() {
@@ -57,8 +57,6 @@ export default function AttendanceTable() {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Optional: Debug returned users
-      // console.log("Fetched data:", data);
 
       // Group by date to keep earliest punch-in per day
       const groupedData: AttendanceRow[] = [];
@@ -109,7 +107,7 @@ export default function AttendanceTable() {
       case "Late arrival":
         return { color: "#D5B500", bgColor: "#FFF8E7" };
       case "On Leave":
-        return { color: "#8B5CF6", bgColor: "#EDE9FE" };
+        return { color: "#777777", bgColor: "#F7F7F7" };
       default:
         return { color: "#0764E6", bgColor: "#E6EFFC" };
     }
@@ -175,13 +173,24 @@ export default function AttendanceTable() {
             onChange={(date: Date | null) => setSelectedMonth(date)}
             dateFormat="MMM yyyy"
             showMonthYearPicker
-            minDate={minDate}
-            maxDate={maxDate}
+            minDate={startOfYear(new Date())}
+            maxDate={endOfYear(new Date())}
+            filterDate={(date) => {
+              const today = new Date();
+
+              // Get start of range (current month - 2 months)
+              const minAllowed = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+              // Get end of range (end of current month)
+              const maxAllowed = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+              return date >= minAllowed && date <= maxAllowed;
+            }}
             className="w-full border border-gray-300 text-gray-700 text-sm sm:text-base font-medium rounded-lg pl-10 pr-12 py-2.5 bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
             calendarClassName="shadow-xl rounded-lg border border-gray-200"
             placeholderText="Select month"
             isClearable={false}
           />
+
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
           <svg
             className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
@@ -225,16 +234,16 @@ export default function AttendanceTable() {
 
                   const punchInTime = row.punch_in
                     ? (() => {
-                        const d = new Date(row.punch_in);
-                        return isNaN(d.getTime()) ? "-" : format(d, "HH:mm");
-                      })()
+                      const d = new Date(row.punch_in);
+                      return isNaN(d.getTime()) ? "-" : format(d, "HH:mm");
+                    })()
                     : "-";
 
                   const punchOutTime = row.punch_out
                     ? (() => {
-                        const d = new Date(row.punch_out);
-                        return isNaN(d.getTime()) ? "-" : format(d, "HH:mm");
-                      })()
+                      const d = new Date(row.punch_out);
+                      return isNaN(d.getTime()) ? "-" : format(d, "HH:mm");
+                    })()
                     : "-";
 
                   const totalHours = row.total_seconds ? formatTime(row.total_seconds) : "-";
@@ -305,21 +314,24 @@ export default function AttendanceTable() {
           <button
             disabled={page === 1}
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            className="px-4 py-2 text-[15px] font-medium text-gray-700 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-500 hover:text-white hover:border-blue-500 transition"
+            className="cursor-pointer px-4 py-2 text-[15px] font-medium text-[#2C2C2C] border border-[#E8E8E9] rounded-[5px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#06A6F0] hover:text-white hover:border-[#06A6F0] transition"
           >
             Prev
           </button>
 
-          <span className="px-4 py-2 bg-blue-500 text-white text-[15px] font-medium rounded-md">{page}</span>
+          <span className="px-4 py-2 bg-[#06A6F0] text-white text-[15px] font-medium rounded-[5px]">
+            {page}
+          </span>
 
           <button
             disabled={page === totalPages || totalPages === 0}
             onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-            className="px-4 py-2 text-[15px] font-medium text-gray-700 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-500 hover:text-white hover:border-blue-500 transition"
+            className="cursor-pointer px-4 py-2 text-[15px] font-medium text-[#2C2C2C] border border-[#E8E8E9] rounded-[5px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#06A6F0] hover:text-white hover:border-[#06A6F0] transition"
           >
             Next
           </button>
         </div>
+
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Logo from "@/app/components/Logo";
 import LogoIcon from "@/app/components/Logo-Icon";
@@ -41,88 +41,107 @@ type MenuItem = {
   children?: SubMenuItem[];
 };
 
-const menuItems: MenuItem[] = [
-  { label: "Dashboard", icon: <Home size={18} />, href: "#" },
-  {
-    label: "Peoples & Teams",
-    icon: <Users size={18} />,
-    children: [
-      { label: "Employee", href: "#", icon: <User size={16} /> },
-      { label: "Company", href: "#", icon: <Building2 size={16} /> },
-      { label: "Leaves", href: "#", icon: <Calendar size={16} /> },
-    ],
-  },
-  { label: "Projects", icon: <Folder size={18} />, href: "#" },
-  {
-    label: "Clients",
-    icon: <UsersRound size={18} />,
-    children: [
-      { label: "Clients List", href: "#", icon: <UserCheck size={16} /> },
-      { label: "Invoices & Payments", href: "#", icon: <DollarSign size={16} /> },
-    ],
-  },
-  {
-    label: "Reports",
-    icon: <FileText size={18} />,
-    children: [
-      { label: "Team Report", href: "#", icon: <BarChart size={16} /> },
-      { label: "Leave Report", href: "#", icon: <Calendar size={16} /> },
-    ],
-  },
-  {
-    label: "Account Settings",
-    icon: <Settings size={18} />,
-    children: [
-      { label: "Profile", href: "#", icon: <User size={16} /> },
-      { label: "Department Manage", href: "#", icon: <Briefcase size={16} /> },
-      { label: "Role & Permission", href: "#", icon: <UserCog size={16} /> },
-    ],
-  },
-  { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "#" },
-];
-
 export default function Sidebar({ isOpen }: { isOpen: boolean }) {
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
-  const [activeMenu, setActiveMenu] = useState<string>("Dashboard");
   const [loggingOut, setLoggingOut] = useState(false);
   const router = useRouter();
+  const pathname = usePathname(); // Get current route
 
+  // Fetch user role
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.replace("/login");
+          return;
+        }
+
+        const { data: userData, error } = await supabase
+          .from("users")
+          .select("role")
+          .eq("auth_id", session.user.id)
+          .single();
+
+        if (error) {
+          console.error("Failed to fetch user role:", error.message);
+          return;
+        }
+
+        setUserRole(userData.role);
+      } catch (err) {
+        console.error("Failed to fetch user role:", err);
+      }
+    };
+
+    fetchUserRole();
+  }, [router]);
+
+  // Toggle submenu
   const toggleSubmenu = (label: string) => {
     setOpenMenus((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
     );
   };
 
+  // Logout
   const handleLogout = async () => {
     setLoggingOut(true);
-
     try {
-      // Check if session exists first
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData.session;
-
-      if (!session) {
-        console.warn("Logout: Auth session missing!");
-        router.replace("/login");
-        setLoggingOut(false);
-        return;
-      }
-
-      // Sign out
       const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error.message);
-        setLoggingOut(false);
-        return;
-      }
-
+      if (error) console.error("Logout error:", error.message);
       router.replace("/login");
+    } finally {
       setLoggingOut(false);
-    } catch (err) {
-      console.error("Logout failed:", err);
-      setLoggingOut(false);
-      router.replace("/login");
     }
+  };
+
+  // Define menu items per role
+  const roleMenuItems: Record<string, MenuItem[]> = {
+    ceo: [
+      { label: "Dashboard", icon: <Home size={18} />, href: "/" },
+      {
+        label: "Projects",
+        icon: <Folder size={18} />,
+        children: [
+          { label: "All Projects", href: "/ceo/project", icon: <FileText size={16} /> },
+          { label: "Add Project", href: "/ceo/project/addproject", icon: <FileText size={16} /> },
+        ],
+      },
+      { label: "Reports", icon: <FileText size={18} />, href: "/ceo/reports" },
+      { label: "Account Settings", icon: <Settings size={18} />, href: "/ceo/account" },
+      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "/help" },
+    ],
+    employees: [
+      { label: "Dashboard", icon: <Users size={18} />, href: "/employees" },
+      { label: "Attendance", icon: <Calendar size={18} />, href: "/employees/attendance" },
+      { label: "Profile", icon: <User size={18} />, href: "/employees/profile" },
+    ],
+    hr: [
+      { label: "Dashboard", icon: <Home size={18} />, href: "/" },
+      { label: "HR", icon: <Users size={18} />, href: "/hr" },
+      { label: "Attendance", icon: <Calendar size={18} />, href: "/hr/attendance" },
+      { label: "Leaves", icon: <Calendar size={18} />, href: "/hr/leaves" },
+      { label: "Support", icon: <HelpCircle size={18} />, href: "/hr/support" },
+      { label: "Account Settings", icon: <Settings size={18} />, href: "/hr/account" },
+    ],
+    team_leader: [
+      { label: "Dashboard", icon: <Home size={18} />, href: "/" },
+      { label: "Teamleader", icon: <Users size={18} />, href: "/teamleader" },
+      { label: "Account Settings", icon: <Settings size={18} />, href: "/teamleader/account" },
+      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "/help" },
+    ],
+  };
+
+  const menuItems = userRole ? roleMenuItems[userRole] || [] : [];
+
+  if (!userRole) return null; // Wait for role to load
+
+  // Function to check if item is active
+  const isActive = (href?: string) => {
+    if (!href) return false;
+    return pathname === href;
   };
 
   return (
@@ -147,7 +166,7 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
                   <button
                     onClick={() => toggleSubmenu(item.label)}
                     className={`w-full flex items-center justify-between rounded-[5px] font-medium text-[14px] px-[10px] py-[10px] transition-colors duration-200
-                      ${activeMenu === item.label
+                      ${item.children.some((sub) => isActive(sub.href))
                         ? "bg-[color:var(--primary-color)] text-[color:var(--white-text)]"
                         : "text-[color:var(--heading-color)] hover:bg-[color:var(--primary-color)] hover:text-[color:var(--white-text)]"
                       }`}
@@ -160,7 +179,6 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
                       (openMenus.includes(item.label) ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
                   </button>
 
-                  {/* Submenu */}
                   {openMenus.includes(item.label) && isOpen && (
                     <motion.ul
                       initial={{ opacity: 0, height: 0 }}
@@ -173,9 +191,8 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
                         <li key={sub.label} className="whitespace-nowrap">
                           <a
                             href={sub.href}
-                            onClick={() => setActiveMenu(sub.label)}
                             className={`flex items-center gap-3 whitespace-nowrap rounded-[5px] font-medium text-[14px] px-[10px] py-[10px] transition-colors duration-200
-                              ${activeMenu === sub.label
+                              ${isActive(sub.href)
                                 ? "bg-[color:var(--primary-color)] text-[color:var(--white-text)]"
                                 : "text-[color:var(--heading-color)] hover:bg-[color:var(--primary-color)] hover:text-[color:var(--white-text)]"
                               }`}
@@ -191,9 +208,8 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
               ) : (
                 <a
                   href={item.href}
-                  onClick={() => setActiveMenu(item.label)}
                   className={`flex items-center gap-3 rounded-[5px] font-medium text-[14px] px-[10px] py-[10px] transition-colors duration-200
-                    ${activeMenu === item.label
+                    ${isActive(item.href)
                       ? "bg-[color:var(--primary-color)] text-[color:var(--white-text)]"
                       : "text-[color:var(--heading-color)] hover:bg-[color:var(--primary-color)] hover:text-[color:var(--white-text)]"
                     }`}
@@ -216,11 +232,7 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
             loggingOut ? "opacity-70 cursor-not-allowed" : ""
           }`}
         >
-          {loggingOut ? (
-            <Loader2 className="animate-spin" size={18} />
-          ) : (
-            <LogOut size={18} />
-          )}
+          {loggingOut ? <Loader2 className="animate-spin" size={18} /> : <LogOut size={18} />}
           {isOpen && <span>{loggingOut ? "Logging out..." : "Logout"}</span>}
         </button>
       </div>

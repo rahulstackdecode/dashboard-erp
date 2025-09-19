@@ -88,15 +88,7 @@ export default function CreateNewProjectForm() {
                                 <option>Manager 2</option>
                                 <option>Manager 3</option>
                             </select>
-                            <svg
-                                className="pointer-events-none absolute right-3 bottom-3.5 w-4 h-4 text-gray-500"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
+                     
                         </div>
 
                         <div className="flex-1">
@@ -127,15 +119,7 @@ export default function CreateNewProjectForm() {
                                 <option>Completed</option>
                                 <option>On Hold</option>
                             </select>
-                            <svg
-                                className="pointer-events-none absolute right-3 bottom-3.5 w-4 h-4 text-gray-500"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
+                            
                         </div>
 
                         <div className="flex-1 relative">
@@ -150,15 +134,7 @@ export default function CreateNewProjectForm() {
                                 <option>Graphic Designer</option>
                                 <option>SEO</option>
                             </select>
-                            <svg
-                                className="pointer-events-none absolute right-3 bottom-3.5 w-4 h-4 text-gray-500"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
+                           
                         </div>
 
                         <div className="flex-1 relative">
@@ -172,15 +148,7 @@ export default function CreateNewProjectForm() {
                                 <option>Medium</option>
                                 <option>Low</option>
                             </select>
-                            <svg
-                                className="pointer-events-none absolute right-3 bottom-3.5 w-4 h-4 text-gray-500"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
+                            
                         </div>
                     </div>
 

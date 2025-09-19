@@ -16,21 +16,30 @@ export default function HomePage() {
   // Fetch logged-in user data dynamically
   useEffect(() => {
     const fetchUserData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error("Session fetch error:", sessionError);
+        setUserName("Guest");
+        return;
+      }
 
       if (session?.user?.id) {
         const { data: userData, error } = await supabase
           .from("users")
-          .select("name, profile_image") // <- fetch profile_image column
+          .select("name, profile_image")
           .eq("auth_id", session.user.id)
-          .single();
+          .maybeSingle(); // 👈 safer than .single()
 
-        if (!error && userData) {
-          setUserName(userData.name || "Guest");
-          setUserImage(userData.profile_image || null); // <- set dynamic image
-        } else {
+        if (error) {
+          console.error("Supabase query error:", error.message || error);
           setUserName("Guest");
-          console.error("Error fetching user:", error);
+        } else if (!userData) {
+          console.warn("No matching user row found for auth_id:", session.user.id);
+          setUserName("Guest");
+        } else {
+          setUserName(userData.name || "Guest");
+          setUserImage(userData.profile_image || null);
         }
       } else {
         setUserName("Guest");
@@ -39,6 +48,7 @@ export default function HomePage() {
 
     fetchUserData();
   }, []);
+
 
   return (
     <>

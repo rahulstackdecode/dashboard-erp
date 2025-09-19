@@ -41,8 +41,6 @@ body {
 
 }
 
-
-
 h1,
 h2,
 h3,
@@ -105,12 +103,22 @@ select {
 .filter-select {
   appearance: none;
 }
-
 select {
-  background-image: none !important;
+  appearance: none;          
+  -webkit-appearance: none;       
+  -moz-appearance: none;         
+
+  background-image: url('/select-icon.svg') !important;
+  background-repeat: no-repeat;
+  background-position: right 0.50rem center;
+  background-size: 0.7rem auto;
+  padding-right: 2rem; 
+  border: 1px solid #ccc;
+  border-radius: 4px;
   box-shadow: none !important;
   outline: none !important;
 }
+
 
 .react-datepicker__month-text {
   font-size: 15px !important;
