@@ -105,13 +105,13 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
         label: "Projects",
         icon: <Folder size={18} />,
         children: [
-          { label: "All Projects", href: "/ceo/project", icon: <FileText size={16} /> },
-          { label: "Add Project", href: "/ceo/project/addproject", icon: <FileText size={16} /> },
+          { label: "All Projects", href: "/ceo/projects", icon: <FileText size={16} /> },
+          { label: "Add Project", href: "/ceo/addproject", icon: <FileText size={16} /> },
         ],
       },
       { label: "Reports", icon: <FileText size={18} />, href: "/ceo/reports" },
-      { label: "Account Settings", icon: <Settings size={18} />, href: "/ceo/account" },
-      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "/help" },
+      { label: "Account Settings", icon: <Settings size={18} />, href: "#" },
+      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "#" },
     ],
     employees: [
       { label: "Dashboard", icon: <Users size={18} />, href: "/employees" },
@@ -119,18 +119,16 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
       { label: "Profile", icon: <User size={18} />, href: "/employees/profile" },
     ],
     hr: [
-      { label: "Dashboard", icon: <Home size={18} />, href: "/" },
-      { label: "HR", icon: <Users size={18} />, href: "/hr" },
+      { label: "Dashboard", icon: <Users size={18} />, href: "/hr" },
       { label: "Attendance", icon: <Calendar size={18} />, href: "/hr/attendance" },
       { label: "Leaves", icon: <Calendar size={18} />, href: "/hr/leaves" },
       { label: "Support", icon: <HelpCircle size={18} />, href: "/hr/support" },
-      { label: "Account Settings", icon: <Settings size={18} />, href: "/hr/account" },
+      { label: "Account Settings", icon: <Settings size={18} />, href: "#" },
     ],
     team_leader: [
-      { label: "Dashboard", icon: <Home size={18} />, href: "/" },
-      { label: "Teamleader", icon: <Users size={18} />, href: "/teamleader" },
-      { label: "Account Settings", icon: <Settings size={18} />, href: "/teamleader/account" },
-      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "/help" },
+      { label: "Dashboard", icon: <Users size={18} />, href: "/teamleader" },
+      { label: "Account Settings", icon: <Settings size={18} />, href: "#" },
+      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "#" },
     ],
   };
 
