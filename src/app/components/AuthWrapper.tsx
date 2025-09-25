@@ -18,10 +18,10 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     ceo: "/",
     team_leader: "/teamleader",
     hr: "/hr",
-    employees: "/employees",
+    employees: "/employees", // list page
   };
 
-  // Function to fetch session + role
+  // Fetch session + role
   const fetchAuth = async () => {
     const { data } = await supabase.auth.getSession();
     const session = data.session;
@@ -45,12 +45,12 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     setAuth({ authenticated: true, role: profile.role });
   };
 
-  // Initial auth check + listen to changes
+  // Initial auth check + listener
   useEffect(() => {
     fetchAuth();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, _session) => {
-      fetchAuth(); // update auth state when login/logout happens
+      fetchAuth();
     });
 
     return () => listener.subscription.unsubscribe();
@@ -83,10 +83,13 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         return;
       }
 
-      // Other roles
-      if (roleFolder !== "/" && !cleanPath.startsWith(roleFolder)) {
-        if (cleanPath !== roleFolder) setRedirectTo(roleFolder);
-        return;
+      // Other roles, allow list + dynamic employee edit pages
+      if (roleFolder !== "/") {
+        const allowedPrefixes = [roleFolder, "/employee"]; // allow dynamic edit pages
+        if (!allowedPrefixes.some(prefix => cleanPath.startsWith(prefix))) {
+          setRedirectTo(roleFolder);
+          return;
+        }
       }
     }
   }, [auth, cleanPath]);

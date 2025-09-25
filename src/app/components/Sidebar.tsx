@@ -14,17 +14,10 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  UsersRound,
   ChevronDown,
   ChevronRight,
   User,
-  Building2,
   Calendar,
-  UserCheck,
-  DollarSign,
-  BarChart,
-  UserCog,
-  Briefcase,
   Loader2,
 } from "lucide-react";
 
@@ -102,6 +95,14 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
     ceo: [
       { label: "Dashboard", icon: <Home size={18} />, href: "/" },
       {
+        label: "Employee Records",
+        icon: <Folder size={18} />,
+        children: [
+          { label: "Employees List", icon: <Calendar size={18} />, href: "/ceo/employees" },
+          { label: "Attendance", icon: <Calendar size={18} />, href: "/ceo/attendance" },
+        ],
+      },
+      {
         label: "Projects",
         icon: <Folder size={18} />,
         children: [
@@ -109,26 +110,65 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
           { label: "Add Project", href: "/ceo/addproject", icon: <FileText size={16} /> },
         ],
       },
+
       { label: "Reports", icon: <FileText size={18} />, href: "/ceo/reports" },
-      { label: "Account Settings", icon: <Settings size={18} />, href: "#" },
       { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "#" },
+      { label: "Profile", icon: <User size={18} />, href: "/ceo/profile" },
+
     ],
     employees: [
       { label: "Dashboard", icon: <Users size={18} />, href: "/employees" },
-      { label: "Attendance", icon: <Calendar size={18} />, href: "/employees/attendance" },
+      {
+        label: "My Records",
+        icon: <Folder size={18} />,
+        children: [
+          { label: "Attendance", icon: <Calendar size={18} />, href: "/employees/attendance" },
+          { label: "Leaves", href: "/employees/leaves", icon: <FileText size={16} /> },
+        ],
+      },
+      { label: "Assigned Tasks", icon: <Folder size={18} />, href: "/employees/tasks" },
+      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "/employees/support" },
+
       { label: "Profile", icon: <User size={18} />, href: "/employees/profile" },
     ],
     hr: [
       { label: "Dashboard", icon: <Users size={18} />, href: "/hr" },
-      { label: "Attendance", icon: <Calendar size={18} />, href: "/hr/attendance" },
-      { label: "Leaves", icon: <Calendar size={18} />, href: "/hr/leaves" },
+      {
+        label: "Employee Records",
+        icon: <Folder size={18} />,
+        children: [
+          { label: "Employees List", icon: <Calendar size={18} />, href: "/hr/employees" },
+          { label: "Attendance", icon: <Calendar size={18} />, href: "/hr/attendance" },
+          { label: "Leaves", icon: <Calendar size={18} />, href: "/hr/leaves" },
+        ],
+      },
+      { label: "Add Employee", icon: <Calendar size={18} />, href: "/hr/add-employee" },
       { label: "Support", icon: <HelpCircle size={18} />, href: "/hr/support" },
-      { label: "Account Settings", icon: <Settings size={18} />, href: "#" },
+      { label: "Profile", icon: <User size={18} />, href: "/hr/profile" },
+
     ],
     team_leader: [
       { label: "Dashboard", icon: <Users size={18} />, href: "/teamleader" },
-      { label: "Account Settings", icon: <Settings size={18} />, href: "#" },
-      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "#" },
+      {
+        label: "Employee Records",
+        icon: <Folder size={18} />,
+        children: [
+          { label: "Employees List", icon: <Calendar size={18} />, href: "/teamleader/employees" },
+          { label: "Attendance", icon: <Calendar size={18} />, href: "/teamleader/attendance" },
+        ],
+      },
+      {
+        label: "Manage Tasks",
+        icon: <Folder size={18} />,
+        children: [
+          { label: "All Tasks", icon: <Calendar size={18} />, href: "/teamleader/tasks" },
+          { label: "Assign Task", icon: <Folder size={18} />, href: "/teamleader/assign-task" },
+        ],
+      },
+      { label: "Helpdesk / Support", icon: <HelpCircle size={18} />, href: "/teamleader/support" },
+      { label: "Profile", icon: <User size={18} />, href: "/teamleader/profile" },
+
+
     ],
   };
 
@@ -226,9 +266,8 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
         <button
           onClick={handleLogout}
           disabled={loggingOut}
-          className={`w-full flex items-center justify-center font-medium gap-3 px-2 cursor-pointer py-2.5 text-white bg-red-500 rounded-md hover:bg-red-600 text-center ${
-            loggingOut ? "opacity-70 cursor-not-allowed" : ""
-          }`}
+          className={`w-full flex items-center justify-center font-medium gap-3 px-2 cursor-pointer py-2.5 text-white bg-red-500 rounded-md hover:bg-red-600 text-center ${loggingOut ? "opacity-70 cursor-not-allowed" : ""
+            }`}
         >
           {loggingOut ? <Loader2 className="animate-spin" size={18} /> : <LogOut size={18} />}
           {isOpen && <span>{loggingOut ? "Logging out..." : "Logout"}</span>}

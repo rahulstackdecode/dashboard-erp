@@ -149,7 +149,7 @@ export default function AttendanceTracking({ userId }: AttendanceProps) {
           {
             user_id: userId,
             date: today, // ✅ local date string
-            punch_in: now.toISOString(), // still UTC for exact timestamp
+            punch_in: now.toISOString(), 
             punch_out: null,
             total_seconds: 0,
             status: "Present",

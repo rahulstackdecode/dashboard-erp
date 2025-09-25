@@ -111,6 +111,7 @@ export default function LeaveForm({ userId, onClose }: LeaveFormProps) {
           disabled={hasPendingLeave}
         >
           <option>Medical Leave</option>
+           <option>Short Leave</option>
           <option>Casual Leave</option>
           <option>Paid Leave</option>
           <option>Other</option>

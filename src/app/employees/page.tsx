@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, X } from "lucide-react";
 import EmployeesStats from "../components/employees/EmployeesStats";
-import TaskOverviewWrapper from "../components/employees/TaskOverview";
+import EmployeeTasks from "@/app/components/employees/EmployeeTasks";
 import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 import AttendanceTracking from "../components/employees/AttendanceTracking";
@@ -11,12 +11,11 @@ import LeaveForm from "../components/employees/LeaveForm";
 
 export default function Dashboard() {
   const [userName, setUserName] = useState("Loading...");
-  const [userPosition, setUserPosition] = useState("Loading...");
+  const [userDesignation, setUserDesignation] = useState("Loading...");
   const [userImage, setUserImage] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
-  // fetch user info
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -27,17 +26,17 @@ export default function Dashboard() {
 
       const { data, error: fetchError } = await supabase
         .from("users")
-        .select("name, position, profile_image")
+        .select("name, designation, profile_image")
         .eq("auth_id", user.id)
         .single();
 
       if (fetchError || !data) {
         setUserName("Unknown User");
-        setUserPosition("-");
+        setUserDesignation("-");
         setUserImage("/images/user-img.png");
       } else {
         setUserName(data.name);
-        setUserPosition(data.position);
+        setUserDesignation(data.designation);
         setUserImage(data.profile_image || "/images/user-img.png");
       }
     };
@@ -50,7 +49,6 @@ export default function Dashboard() {
         Employee Dashboard
       </h2>
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* LEFT */}
         <div className="flex-1 space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full bg-white rounded-sm p-5 shadow">
             <div className="flex items-center gap-4">
@@ -61,18 +59,16 @@ export default function Dashboard() {
                 height={56}
                 className="rounded-full object-cover w-[56px] h-[56px]"
               />
-
               <div>
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900 leading-snug">
                   Welcome Back, {userName}
                 </h3>
                 <p className="text-sm sm:text-base font-light text-gray-600">
-                  {userPosition || "Please update your position"}
+                  {userDesignation || "Please update your designation"}
                 </p>
               </div>
             </div>
 
-            {/* Apply Leave button */}
             <button
               onClick={() => setIsLeaveModalOpen(true)}
               className="mt-4 sm:mt-0 flex items-center gap-2 px-4 py-2 text-sm cursor-pointer font-medium text-white bg-[var(--primary-color)] rounded-sm transition hover:bg-[var(--btn-hover-bg)] w-full sm:w-auto justify-center"
@@ -84,13 +80,11 @@ export default function Dashboard() {
           <EmployeesStats />
         </div>
 
-        {/* RIGHT - Attendance */}
         <AttendanceTracking userId={userId} />
       </div>
 
-      <TaskOverviewWrapper />
-
-      {/* Leave Form Modal */}
+      <div className="mt-12"><EmployeeTasks />
+      </div>
       {isLeaveModalOpen && (
         <div
           className="fixed inset-0 flex justify-center items-center z-50 px-4 sm:px-0"
@@ -114,7 +108,6 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* Inject your LeaveForm component */}
             <div className="p-4 sm:p-8">
               <LeaveForm userId={userId} onClose={() => setIsLeaveModalOpen(false)} />
             </div>

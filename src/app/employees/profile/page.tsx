@@ -28,7 +28,6 @@ const tabs: Tab[] = [
             { name: "mobile", label: "Mobile Number", type: "tel", placeholder: "Mobile Number" },
             { name: "email", label: "Email", type: "email", readOnly: true },
             { name: "dob", label: "Date of Birth", type: "date" },
-            { name: "maritalStatus", label: "Marital Status", type: "select", options: ["Single", "Married", "Divorced", "Widowed", "Other"] },
             { name: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Other"] },
             { name: "address", label: "Address", type: "textarea", placeholder: "Street, building, locality..." },
             { name: "city", label: "City", type: "text", placeholder: "City" },
@@ -40,11 +39,9 @@ const tabs: Tab[] = [
         name: "Professional Information",
         fields: [
             { name: "empId", label: "Employee ID", type: "text", readOnly: true },
-            { name: "empType", label: "Employee Type", type: "select", options: ["Full-Time", "Part-Time", "Contract"] },
-            { name: "department", label: "Department", type: "select", options: ["HR", "Finance", "Engineering", "Sales"] },
-            { name: "designation", label: "Designation", type: "text" },
-            { name: "working_days", label: "Working Days", type: "select", options: ["5 Days", "6 Days"] },
-            { name: "joining_date", label: "Joining Date", type: "date" },
+            { name: "empType", label: "Employee Type", type: "select", options: ["Full-Time", "Part-Time", "Contract"], readOnly: true },
+            { name: "designation", label: "Designation", type: "text", readOnly: true },
+            { name: "joining_date", label: "Joining Date", type: "date", readOnly: true },
         ],
     },
 ];
@@ -54,8 +51,8 @@ type FormData = Record<string, string>;
 export default function EmployeeProfileForm() {
     const [activeTab, setActiveTab] = useState(0);
     const [form, setForm] = useState<FormData>({});
-    const [uploading, setUploading] = useState<boolean>(false);
-    const [message, setMessage] = useState<string>("");
+    const [uploading, setUploading] = useState(false);
+    const [message, setMessage] = useState("");
     const [profileImage, setProfileImage] = useState<string | null>(null);
 
     const fetchUserData = useCallback(async () => {
@@ -75,69 +72,41 @@ export default function EmployeeProfileForm() {
 
         const initialForm: FormData = {};
 
-        // Generate Employee ID automatically if not exists
-        let empId = "";
-        if (data?.empId) {
-            empId = data.empId;
-        } else {
-            const { data: lastEmp, error: lastError } = await supabase
-                .from("users")
-                .select("empId")
-                .order("empId", { ascending: false })
-                .limit(1)
-                .single();
+        const keyMap: Record<string, string> = {
+            fullName: "name",
+            pinCode: "pin_code",
+            empId: "empId",
+            empType: "emp_type",
+            designation: "designation",
+            joining_date: "joining_date",
+        };
 
-            if (!lastError && lastEmp?.empId) {
-                const lastNum = parseInt(lastEmp.empId, 10);
-                empId = (lastNum + 1).toString().padStart(3, "0");
-            } else {
-                empId = "001";
-            }
-        }
+        tabs.forEach(tab =>
+            tab.fields.forEach(field => {
+                initialForm[field.name] = data[keyMap[field.name] || field.name] ?? "";
+            })
+        );
 
-        tabs.forEach((tab) => {
-            tab.fields.forEach((field) => {
-                const keyMap: Record<string, string> = {
-                    fullName: "name",
-                    maritalStatus: "marital_status",
-                    pinCode: "pin_code",
-                    empId: "empId",
-                };
-                initialForm[field.name] =
-                    field.name === "empId"
-                        ? empId
-                        : data[keyMap[field.name] || field.name] ?? "";
-            });
-        });
-
-        if (data?.profile_image) {
-            setProfileImage(data.profile_image);
-        }
-
+        if (data?.profile_image) setProfileImage(data.profile_image);
         setForm(initialForm);
     }, []);
 
-    useEffect(() => {
-        fetchUserData();
-    }, [fetchUserData]);
+    useEffect(() => { fetchUserData(); }, [fetchUserData]);
 
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-    ) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
+        setForm(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => setProfileImage(e.target?.result as string);
-            reader.readAsDataURL(file);
-        }
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => setProfileImage(ev.target?.result as string);
+        reader.readAsDataURL(file);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (tabIndex: number, e: React.FormEvent) => {
         e.preventDefault();
         setUploading(true);
         setMessage("");
@@ -150,73 +119,74 @@ export default function EmployeeProfileForm() {
             }
 
             const updates: Record<string, string | null> & { profile_image?: string } = {};
+            const keyMap: Record<string, string> = {
+                fullName: "name",
+                pinCode: "pin_code",
+                empId: "empId",
+                empType: "emp_type",
+                designation: "designation",
+                joining_date: "joining_date",
+            };
 
-            for (const tab of tabs) {
-                for (const field of tab.fields) {
-                    const keyMap: Record<string, string> = {
-                        fullName: "name",
-                        maritalStatus: "marital_status",
-                        pinCode: "pin_code",
-                        empId: "empId",
-                    };
+            tabs[tabIndex].fields.forEach(field => {
+                let value = form[field.name]?.trim() || null;
+                if (field.type === "date" && value === "") value = null;
+                updates[keyMap[field.name] || field.name] = value;
+            });
 
-                    let value = form[field.name]?.trim() || null;
+            if (tabIndex === 0 && profileImage) updates.profile_image = profileImage;
 
-                    // If field is a date and empty string, set to null
-                    if (field.type === "date" && value === "") {
-                        value = null;
-                    }
-
-                    updates[keyMap[field.name] || field.name] = value;
-                }
-            }
-
-            if (profileImage) updates.profile_image = profileImage;
-
-            const { error } = await supabase
-                .from("users")
-                .update(updates)
-                .eq("auth_id", user.id);
-
+            const { error } = await supabase.from("users").update(updates).eq("auth_id", user.id);
             if (error) setMessage("Update failed: " + error.message);
             else setMessage("Profile updated successfully");
         } catch (err) {
             console.error(err);
             setMessage("Unexpected error, check console");
-        } finally {
-            setUploading(false);
-        }
+        } finally { setUploading(false); }
     };
 
+    const renderField = (field: Field) => {
+        const isReadOnly = field.readOnly || activeTab === 1;
+        const commonClasses = `w-full border border-[#567D8E33] rounded-[4px] px-3 py-2 text-[15px] font-light text-[#2C2C2C] focus:outline-none ${isReadOnly ? "bg-gray-100 cursor-not-allowed" : ""}`;
+
+        if (field.type === "textarea") {
+            return <textarea name={field.name} value={form[field.name] || ""} onChange={handleChange} rows={3} placeholder={field.placeholder} readOnly={isReadOnly} className={commonClasses} />;
+        }
+
+     if (field.type === "select") {
+    return (
+        <select
+            name={field.name}
+            value={form[field.name] || ""}
+            onChange={handleChange}
+            className={`${commonClasses} appearance-none ${field.readOnly ? "bg-gray-100 pointer-events-none" : ""}`}
+        >
+            {field.options?.map(opt => (
+                <option key={opt} value={opt}>
+                    {opt}
+                </option>
+            ))}
+        </select>
+    );
+}
+
+
+
+        return <input type={field.type || "text"} name={field.name} value={form[field.name] || ""} onChange={handleChange} placeholder={field.placeholder} readOnly={isReadOnly} className={commonClasses} />;
+    };
 
     return (
         <>
-            <h2 className="mb-6 font-medium text-[26px] sm:text-[32px] text-[color:var(--heading-color)] leading-snug">
-                Account Overview
-            </h2>
+            <h2 className="mb-6 font-medium text-[26px] sm:text-[32px] text-[color:var(--heading-color)] leading-snug">Account Overview</h2>
             <div className="border border-[#567D8E33] rounded-md p-6 pt-3">
-                {/* Tabs */}
                 <div className="flex border-b border-[#567D8E33] mb-6 overflow-x-auto">
                     {tabs.map((tab, idx) => (
-                        <button
-                            key={tab.name}
-                            type="button"
-                            onClick={() => setActiveTab(idx)}
-                            className={`
-                px-4 py-2 cursor-pointer whitespace-nowrap font-medium text-[#2C2C2C]
-                border-b-2
-                ${activeTab === idx ? "text-[#06A6F0] border-[#06A6F0]" : "border-transparent"}
-                hover:text-[#06A6F0] hover:border-[#06A6F0]
-                transition-colors duration-200
-              `}
-                        >
+                        <button key={tab.name} type="button" onClick={() => setActiveTab(idx)} className={`px-4 py-2 cursor-pointer whitespace-nowrap font-medium text-[#2C2C2C] border-b-2 ${activeTab === idx ? "text-[#06A6F0] border-[#06A6F0]" : "border-transparent"} hover:text-[#06A6F0] hover:border-[#06A6F0] transition-colors duration-200`}>
                             {tab.name}
                         </button>
                     ))}
                 </div>
-
-                <form onSubmit={handleSubmit}>
-                    {/* Profile upload only in Personal tab */}
+                <form onSubmit={(e) => handleSubmit(activeTab, e)}>
                     {activeTab === 0 && (
                         <div className="flex flex-col sm:flex-row items-center gap-6 mb-6">
                             <div className="w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
@@ -246,131 +216,105 @@ export default function EmployeeProfileForm() {
                         </div>
                     )}
 
-                    {/* Fields */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {tabs[activeTab].fields.map((field) => {
-                            if (["city", "state", "pinCode"].includes(field.name)) return null;
+                        {activeTab === 0 && (
+                            <>
+                                {/* Full Name & Mobile */}
+                                {["fullName", "mobile"].map(name => {
+                                    const field = tabs[activeTab].fields.find(f => f.name === name);
+                                    if (!field) return null;
+                                    return (
+                                        <div key={field.name}>
+                                            <label className="block mb-1">{field.label}</label>
+                                            {renderField(field)}
+                                        </div>
+                                    );
+                                })}
 
-                            if (field.type === "textarea") {
-                                return (
-                                    <div key={field.name} className="col-span-1 sm:col-span-2">
-                                        <label className="block mb-1">{field.label}</label>
-                                        <textarea
-                                            name={field.name}
-                                            value={form[field.name] || ""}
-                                            onChange={handleChange}
-                                            rows={3}
-                                            className="w-full border border-[#567D8E33] rounded-[4px] px-3 py-2 text-[15px] font-light text-[#2C2C2C] focus:outline-none"
-                                            placeholder={field.placeholder}
-                                        />
-                                    </div>
-                                );
-                            }
-
-                            if (field.type === "select") {
-                                return (
-                                    <div key={field.name}>
-                                        <label className="block mb-1">{field.label}</label>
-                                        <select
-                                            name={field.name}
-                                            value={form[field.name] || ""}
-                                            onChange={handleChange}
-                                            className="w-full border border-[#567D8E33] rounded-[4px] px-3 py-2 text-[15px] font-light text-[#2C2C2C] focus:outline-none appearance-none"
-                                        >
-                                            <option value="">Select {field.label}</option>
-                                            {field.options?.map((opt) => (
-                                                <option key={opt} value={opt}>
-                                                    {opt}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                );
-                            }
-
-                            return (
-                                <div key={field.name}>
-                                    <label className="block mb-1">{field.label}</label>
-                                    <input
-                                        type={field.type || "text"}
-                                        name={field.name}
-                                        value={form[field.name] || ""}
-                                        onChange={handleChange}
-                                        readOnly={field.readOnly}
-                                        placeholder={field.placeholder}
-                                        className={`w-full border border-[#567D8E33] rounded-[4px] px-3 py-2 text-[15px] font-light text-[#2C2C2C] focus:outline-none ${field.readOnly ? "bg-gray-100 cursor-not-allowed" : ""
-                                            }`}
-                                    />
+                                {/* Email / DOB / Gender */}
+                                <div className="col-span-1 sm:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {["email", "dob", "gender"].map(name => {
+                                        const field = tabs[activeTab].fields.find(f => f.name === name);
+                                        if (!field) return null;
+                                        return (
+                                            <div key={field.name}>
+                                                <label className="block mb-1">{field.label}</label>
+                                                {renderField(field)}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            );
-                        })}
 
-                        {/* City, State, Pin Code row */}
-                        <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {["city", "state", "pinCode"].map((fieldName) => {
-                                const field = tabs[activeTab].fields.find((f) => f.name === fieldName);
-                                if (!field) return null;
-                                return (
-                                    <div key={field.name} className="w-full">
-                                        <label className="block mb-1">{field.label}</label>
-                                        <input
-                                            type="text"
-                                            name={field.name}
-                                            value={form[field.name] || ""}
-                                            onChange={handleChange}
-                                            placeholder={field.placeholder}
-                                            className="w-full border border-[#567D8E33] rounded-[4px] px-3 py-2 text-[15px] font-light text-[#2C2C2C] focus:outline-none"
-                                        />
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                {/* Address */}
+                                {(() => {
+                                    const field = tabs[activeTab].fields.find(f => f.name === "address");
+                                    if (!field) return null;
+                                    return (
+                                        <div key={field.name} className="col-span-1 sm:col-span-2">
+                                            <label className="block mb-1">{field.label}</label>
+                                            {renderField(field)}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* City / State / Pin Code */}
+                                <div className="col-span-1 sm:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {["city", "state", "pinCode"].map(name => {
+                                        const field = tabs[activeTab].fields.find(f => f.name === name);
+                                        if (!field) return null;
+                                        return (
+                                            <div key={field.name}>
+                                                <label className="block mb-1">{field.label}</label>
+                                                {renderField(field)}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* Professional Information */}
+                        {activeTab === 1 && tabs[activeTab].fields.map(field => (
+                            <div key={field.name} className="col-span-1 sm:col-span-2 md:col-span-1">
+                                <label className="block mb-1">{field.label}</label>
+                                {renderField(field)}
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Success / Error message */}
-                    {activeTab === tabs.length - 1 && message && (
-                        <div className="mt-4 text-center text-md font-medium text-green-600">
-                            {message}
-                        </div>
-                    )}
+                    {message && <div className="mt-4 text-center text-md font-medium text-green-600">{message}</div>}
 
-                    {/* Navigation buttons */}
                     <div className="flex flex-col sm:flex-row justify-end mt-6 gap-4">
                         {activeTab > 0 && (
                             <button
                                 type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setActiveTab(activeTab - 1);
-                                }}
+                                onClick={(e) => { e.preventDefault(); setActiveTab(activeTab - 1); }}
                                 className="cursor-pointer px-5 py-2 bg-white text-black border border-[#567D8E33] rounded hover:bg-[#06A6F0] hover:text-white hover:border-[#06A6F0] transition-colors duration-200"
                             >
                                 Back
                             </button>
                         )}
-
-                        {activeTab < tabs.length - 1 ? (
+                        {activeTab < tabs.length - 1 && (
                             <button
                                 type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setActiveTab(activeTab + 1);
-                                }}
+                                onClick={(e) => { e.preventDefault(); setActiveTab(activeTab + 1); }}
                                 className="cursor-pointer px-5 py-2 bg-white text-black border border-[#567D8E33] rounded hover:bg-[#06A6F0] hover:text-white hover:border-[#06A6F0] transition-colors duration-200"
                             >
                                 Next
                             </button>
-                        ) : (
-                            <button
-                                type="submit"
-                                disabled={uploading}
-                                className="cursor-pointer px-5 py-2 bg-[#06A6F0] text-white border border-[#06A6F0] rounded hover:bg-[#05A1DB] hover:border-[#05A1DB] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {uploading ? "Saving..." : "Submit"}
-                            </button>
                         )}
+                        <button
+                            type="submit"
+                            disabled={uploading}
+                            className="cursor-pointer px-5 py-2 bg-[#06A6F0] text-white border border-[#06A6F0] rounded hover:bg-[#05A1DB] hover:border-[#05A1DB] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {uploading ? "Saving..." : "Submit"}
+                        </button>
                     </div>
                 </form>
+
+
+
             </div>
         </>
     );

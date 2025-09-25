@@ -1,72 +1,96 @@
-import { Users, Package, TrendingUp, Clock, TrendingDown } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Users, Package, TrendingUp, Clock, ArrowRight } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function HrEmployeesStats() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const [statsData, setStatsData] = useState({
+        totalEmployees: 0,
+        todayPresent: 0,
+        todayAbsent: 0,
+        pendingLeaves: 0,
+    });
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const { count: totalEmployees } = await supabase
+                    .from("users")
+                    .select("*", { count: "exact", head: true });
+
+                const today = new Date();
+                const dateStr = today.toISOString().split("T")[0];
+
+                const { data: attendanceData } = await supabase
+                    .from("attendance")
+                    .select("id, punch_in, punch_out")
+                    .eq("date", dateStr);
+
+                const todayPresent = attendanceData?.filter((a) => a.punch_in).length || 0;
+                const todayAbsent = (totalEmployees || 0) - todayPresent;
+
+                const { count: pendingLeaves } = await supabase
+                    .from("leaves")
+                    .select("*", { count: "exact", head: true })
+                    .eq("status", "Pending");
+
+                setStatsData({
+                    totalEmployees: totalEmployees || 0,
+                    todayPresent,
+                    todayAbsent,
+                    pendingLeaves: pendingLeaves || 0,
+                });
+            } catch (err) {
+                console.error("Error fetching HR stats:", err);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
     const stats = [
         {
             title: "Total Employees",
-            value: "100",
+            value: statsData.totalEmployees,
             icon: <Users className="text-[#8280FF]" size={24} />,
             iconBg: "bg-[#8280FF]/20",
-            change: (
-                <p className="text-[#606060]">
-                    <span className="text-[#00B69B]">
-                        <TrendingUp className="inline mr-1" size={14} /> 8.5%
-                    </span>{" "}
-                    Up from Last Year
-                </p>
-            ),
         },
         {
-            title: "On Time Arrival",
-            value: "80",
+            title: "Today Present",
+            value: statsData.todayPresent,
             icon: <Package className="text-[#FEC53D]" size={24} />,
             iconBg: "bg-[#FEC53D]/21",
-            change: (
-                <p className="text-[#606060]">
-                    <span className="text-[#F93C65]">
-                        <TrendingDown className="inline mr-1" size={14} /> 1.3%
-                    </span>{" "}
-                    Less than yesterday
-                </p>
-            ),
         },
         {
-            title: "Absent",
-            value: "5",
+            title: "Today Absent",
+            value: statsData.todayAbsent,
             icon: <TrendingUp className="text-[#4AD991]" size={24} />,
             iconBg: "bg-[#4AD991]/21",
-            change: (
-                <p className="text-[#606060]">
-                    <span className="text-[#00B69B]">
-                        <TrendingUp className="inline mr-1" size={14} /> 4.3%
-                    </span>{" "}
-                    Increase than yesterday
-                </p>
-            ),
         },
         {
             title: "Pending Leaves",
-            value: "20",
+            value: statsData.pendingLeaves,
             icon: <Clock className="text-[#FF9066]" size={24} />,
             iconBg: "bg-[#FF9066]/21",
-            change: (
-                <p className="text-[#606060]">
-                    <span className="text-[#00B69B]">
-                        <TrendingUp className="inline mr-1" size={14} /> 1.8%
-                    </span>{" "}
-                    Up from Last Month
-                </p>
-            ),
+            onClick: pathname.includes("/teamleader")
+                ? undefined
+                : () => router.push("/hr/leaves"),
         },
     ];
 
     return (
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2  gap-6 mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mt-10">
             {stats.map((item, index) => (
                 <div
                     key={index}
-                    className="bg-white rounded-[14px] p-5 flex flex-col gap-5"
-                    style={{ boxShadow: "6px 6px 54px 0px #0000000D" }}
+                    className={`bg-white rounded-[14px] p-5 flex flex-col gap-5 cursor-pointer ${item.onClick ? "hover:shadow-lg transition" : ""
+                        }`}
+                    style={{ boxShadow: "6px 6px 54px 0px #0000000D", minHeight:'140px' }}
+                    onClick={item.onClick}
                 >
                     <div className="flex items-center justify-between">
                         <div className="stats-content">
@@ -89,8 +113,11 @@ export default function HrEmployeesStats() {
                             {item.icon}
                         </div>
                     </div>
-
-                    {item.change}
+                    {item.onClick && (
+                        <div className="flex items-center justify-end text-[#FF4C4C] font-medium text-sm">
+                            View <ArrowRight className="ml-2" size={16} />
+                        </div>
+                    )}
                 </div>
             ))}
         </div>

@@ -69,15 +69,9 @@ export default function HomePage() {
           />
           <div>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 leading-snug">
-              Welcome1 Back, {userName}
+              Welcome Back, {userName}
             </h3>
-            <p className="text-sm sm:text-base font-light text-gray-600">
-              You have{" "}
-              <span className="text-[color:var(--primary-color)] underline cursor-pointer">
-                21
-              </span>{" "}
-              Pending Approvals
-            </p>
+            
           </div>
         </div>
 

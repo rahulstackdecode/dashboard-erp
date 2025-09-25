@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import HrEmployeesStats from "../components/hr/HrEmployessStats";
 import HrAttendanceOverview from "../components/hr/HrAttendanceOverview";
 import AttendanceCharts from "../components/hr/AttendanceCharts";
@@ -11,8 +11,10 @@ import AttendanceTracking from "../components/employees/AttendanceTracking";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function Dashboard() {
-  const [userId, setUserId] = useState<string | null>(null); 
+  const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState("Loading...");
+  const [userImage, setUserImage] = useState("");
+  const [userDesignation, setUserDesignation] = useState("Loading...");
   const [punchInTime, setPunchInTime] = useState<Date | null>(null);
   const [totalSeconds, setTotalSeconds] = useState<number>(0);
   const [accumulatedSeconds, setAccumulatedSeconds] = useState<number>(0);
@@ -28,28 +30,40 @@ export default function Dashboard() {
   // Fetch logged-in user's name + id dynamically
   useEffect(() => {
     const fetchUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
 
-      if (session?.user?.id) {
-        setUserId(session.user.id); // ✅ Save userId
+        if (session?.user?.id) {
+          const userId = session.user.id;
+          setUserId(userId);
 
-        const { data: userData, error } = await supabase
-          .from("users")
-          .select("name")
-          .eq("auth_id", session.user.id) // adjust column if needed
-          .single();
+          const { data: userData, error } = await supabase
+            .from("users")
+            .select("name, designation, profile_image") // include designation
+            .eq("auth_id", userId)
+            .single();
 
-        if (!error && userData?.name) {
-          setUserName(userData.name);
+          if (error || !userData) {
+            setUserName("Unknown User");
+            setUserDesignation("-");
+            setUserImage("/images/user-img.png");
+          } else {
+            setUserName(userData.name || "Unknown User");
+            setUserDesignation(userData.designation || "-");
+            setUserImage(userData.profile_image || "/images/user-img.png");
+          }
         } else {
           setUserName("Guest");
-          console.error("Error fetching user:", error);
+          setUserId(null);
+          setUserDesignation("-");
+          setUserImage("/images/user-img.png");
         }
-      } else {
+      } catch (err) {
+        console.error("Error fetching user:", err);
         setUserName("Guest");
         setUserId(null);
+        setUserDesignation("-");
+        setUserImage("/images/user-img.png");
       }
     };
 
@@ -128,11 +142,11 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full bg-white rounded-sm p-5 shadow-[0px_0px_1px_1px_rgba(198,198,198)]">
             <div className="flex items-center gap-4">
               <Image
-                src="/images/user-img.png"
+                src={userImage || "/images/user-img.png"}
                 alt="User Img"
                 width={56}
                 height={56}
-                className="rounded-full"
+                className="rounded-full object-cover w-[56px] h-[56px]"
               />
               <div>
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900 leading-snug">

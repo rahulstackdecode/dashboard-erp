@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import HelpdeskTickets from "@/app/components/hr/HelpdeskSupport";
 
 export default function HomePage() {
